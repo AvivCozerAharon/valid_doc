@@ -58,10 +58,10 @@ class Info_home_State extends State<Info_home> {
               ),
             ),
             height: MediaQuery.of(context).size.height < 590
-                ? MediaQuery.of(context).size.height * 0.45
+                ? MediaQuery.of(context).size.height * 0.47
                 : MediaQuery.of(context).size.height > 850
-                    ? MediaQuery.of(context).size.height * 0.25
-                    : MediaQuery.of(context).size.height * 0.3,
+                    ? MediaQuery.of(context).size.height * 0.27
+                    : MediaQuery.of(context).size.height * 0.33,
             child: Column(
               children: [
                 SizedBox(
@@ -89,7 +89,9 @@ class Info_home_State extends State<Info_home> {
                       child: Container(
                         alignment: Alignment.topRight,
                         child: IconButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigation.info_delete(context);
+                            },
                             icon: const Icon(
                               Icons.delete,
                               color: Style.secondColor,
@@ -147,6 +149,7 @@ class Info_home_State extends State<Info_home> {
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              if(Model.SelectedDoc.number != 'none')
               TextButton(
                 onPressed: null,
                 child: Container(
@@ -171,9 +174,9 @@ class Info_home_State extends State<Info_home> {
                         SizedBox(
                           width: MediaQuery.of(context).size.width * 0.04,
                         ),
-                        const Text(
-                          '065.909.437-10',
-                          style: TextStyle(
+                         Text(
+                          Model.SelectedDoc.number,
+                          style: const TextStyle(
                             color: Style.secondColor,
                             fontFamily: Style.fontTitle,
                             fontSize: 20,
@@ -182,14 +185,42 @@ class Info_home_State extends State<Info_home> {
                       ],
                     )),
               ),
-              SizedBox(
+              if(Model.SelectedDoc.number == 'none')
+                TextButton(
+                  onPressed: null,
+                  child: Container(
+                      width: MediaQuery.of(context).size.width * 0.9,
+                      height: MediaQuery.of(context).size.height * 0.08,
+                      color: const Color(0xff383434),
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.04,
+                          ),
+                          const Text(
+                            'Adiconar o número do documento',
+                            style: TextStyle(
+                              color: Style.secondColor,
+                              fontFamily: Style.fontButton,
+                              fontSize: 15,
+                            ),
+                          ),
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.04,
+                          ),
+                          Icon(Icons.add_circle_outline_rounded,color: Style.secondColor,size: 20,),
+
+                        ],
+                      )),
+                ),
+
+                SizedBox(
                 height: MediaQuery.of(context).size.height * 0.025,
               ),
-
-
-
-
-              TextButton(
+              if(Model.SelectedDoc.notes != 'none')
+                TextButton(
                 onPressed: null,
                 child: Container(
                     width: MediaQuery.of(context).size.width * 0.9,
@@ -208,24 +239,23 @@ class Info_home_State extends State<Info_home> {
                             SizedBox(
                               width: MediaQuery.of(context).size.width * 0.04,
                             ),
-                          const Text(
-                            'Notas do documento:',
-                            style: TextStyle(
-                              color: Style.secondColor,
-                              fontFamily: Style.fontButton,
-                              fontSize: 15,
+                            const Text(
+                              'Notas do documento:',
+                              style: TextStyle(
+                                color: Style.secondColor,
+                                fontFamily: Style.fontButton,
+                                fontSize: 15,
+                              ),
                             ),
-                          ),
-                        ],),
-
+                          ],
+                        ),
                         Container(
                             alignment: Alignment.center,
-                            margin: EdgeInsets.only(left: 30,top: 15),
-                            child: const Text(
-                              'Guardado na caixa de documentos na caveta do escritorio no saco azul',
-                              maxLines: 5,
-
-                              style: TextStyle(
+                            margin: EdgeInsets.only(left: 30, top: 15),
+                            child:  Text(
+                              Model.SelectedDoc.notes,
+                              maxLines: 4,
+                              style: const TextStyle(
                                 fontFamily: Style.fontTitle,
                                 fontSize: 20,
                                 color: Style.secondColor,
@@ -234,14 +264,54 @@ class Info_home_State extends State<Info_home> {
                         SizedBox(
                           width: MediaQuery.of(context).size.height * 0.04,
                         ),
-                        Row(children: [
-                          Icon(Icons.edit),
-                        ],mainAxisAlignment: MainAxisAlignment.end,)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: const [
+                            Icon(Icons.edit),
+                          ],
+                        )
                       ],
                     )),
               ),
+              if(Model.SelectedDoc.notes == 'none')
+                TextButton(
+                  onPressed: null,
+                  child: Container(
+                      width: MediaQuery.of(context).size.width * 0.9,
+                      height: MediaQuery.of(context).size.height * 0.08,
+                      color: const Color(0xff383434),
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.04,
+                          ),
+                          const Text(
+                            'Adiconar uma observação ao documento',
+                            style: TextStyle(
+                              color: Style.secondColor,
+                              fontFamily: Style.fontButton,
+                              fontSize: 15,
+                            ),
+                          ),
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.04,
+                          ),
+                          Icon(Icons.add_circle_outline_rounded,color: Style.secondColor,size: 20,),
+
+                        ],
+                      )),
+                ),
             ],
-          )
+          ),
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.05,
+                  ),
+
+                  Button.next(onPressed: (){
+                    Navigation.info_edit(context);
+                  },text: 'Editar Validade',context: context,val: true)
         ])));
   }
 }

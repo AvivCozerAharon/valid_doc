@@ -101,7 +101,7 @@ class Doc_who_State extends State<Doc_who> {
                 break;
 
             }
-            db.DocumentsList.add([Model.Doc_name,Model.Doc_type,Model.Doc_country,Model.Doc_val]);
+            db.DocumentsList.add([Model.Doc_name,Model.Doc_type,Model.Doc_country,Model.Doc_val,'none','none']);
             TextController.clear();
             db.updateData();
             Model.clear();

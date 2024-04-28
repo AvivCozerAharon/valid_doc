@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:valid_doc/model/model.dart';
 import 'package:valid_doc/view/home.dart';
 import 'prefabs/style.dart';
 

@@ -1,6 +1,4 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:valid_doc/model/model.dart';
-
 
 class DocumentDataBase{
   final _storage = Hive.box('storage');

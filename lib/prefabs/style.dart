@@ -21,6 +21,8 @@ class Style {
   static const fontButton = "RobotoMedium";
   static const fontSubButton = "RobotoRegular";
   static const fontNextButton = "TitilliumWebLight";
+  static const fontDelete = "QuicksandBold";
+
 
 
 

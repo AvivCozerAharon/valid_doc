@@ -14,6 +14,15 @@ class Doc_date extends StatefulWidget {
 DateTime val = DateTime.now();
 
 class Doc_date_State extends State<Doc_date> {
+
+  @override
+  void initState() {
+    if(val != DateTime.now()){
+      val = DateTime.now();
+    }
+
+    super.initState();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(

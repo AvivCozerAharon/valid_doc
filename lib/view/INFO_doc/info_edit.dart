@@ -18,7 +18,6 @@ class Info_edit_State extends State<Info_edit> {
   DateTime val = DateFormat('dd/MM/yyyy').parse(Model.SelectedDoc.val);
   String newval = '';
   DocumentDataBase db = DocumentDataBase();
-  final _storage = Hive.box('storage');
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +47,7 @@ class Info_edit_State extends State<Info_edit> {
               Container(
                 padding: const EdgeInsets.only(left: 10, right: 10),
                 child: const Text(
-                  'Qual a data de expiração do documento?',
+                  'Qual a nova data de expiração do documento?',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontFamily: Style.fontTitle,

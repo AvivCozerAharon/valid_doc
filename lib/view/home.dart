@@ -100,7 +100,7 @@ class Home_State extends State<Home> {
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.0001,
             ),
-            if (_storage.get("DOCUMENTS") != null)
+            if (_storage.get("DOCUMENTS") != null || db.DocumentsList.isNotEmpty)
               Expanded(
                 flex: 20,
                 child: ListView.builder(
@@ -115,6 +115,8 @@ class Home_State extends State<Home> {
                             type: db.DocumentsList[index][1],
                             country: db.DocumentsList[index][2],
                             val: db.DocumentsList[index][3],
+                            number: db.DocumentsList[index][4],
+                            notes: db.DocumentsList[index][5],
                           );
                         },
                         name: db.DocumentsList[index][0],
@@ -124,7 +126,7 @@ class Home_State extends State<Home> {
                       );
                     }),
               ),
-            if (_storage.get("DOCUMENTS") == null)
+            if (_storage.get("DOCUMENTS") == null || db.DocumentsList.isEmpty)
               const Expanded(
                 flex: 20,
                 child: Text(

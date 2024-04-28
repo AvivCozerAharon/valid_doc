@@ -12,9 +12,18 @@ class Doc_country extends StatefulWidget {
 }
 
 List country = ['Brazil', 'USA', 'Canada','Mexico','Israel','England', 'Germany','Spain', 'France','Portugal','Poland','Italy','Argentina','Chile','Uruguay','Colombia','Paraguay','Peru','Japan','China','Australia','Russia'];
-String SelectedCountry = '';
+String SelectedCountry = 'Brazil';
 
 class Doc_country_State extends State<Doc_country> {
+  @override
+  void initState() {
+    if(SelectedCountry != ''){
+       SelectedCountry = 'Brazil';
+      print('TESTE');
+    }
+
+    super.initState();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,6 +81,7 @@ class Doc_country_State extends State<Doc_country> {
         ),
       ),
       bottomSheet: Button.next(onPressed: (){
+        print(SelectedCountry);
         if(SelectedCountry == ''){
           Model.Doc_country = 'Brazil';
 
