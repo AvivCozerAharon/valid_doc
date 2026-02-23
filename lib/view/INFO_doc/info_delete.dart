@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:valid_doc/model/model.dart';
 import 'package:valid_doc/prefabs/style.dart';
+import 'package:valid_doc/services/haptic.dart';
 import 'package:valid_doc/services/notification_service.dart';
 import '../../../controller/nav_controller.dart';
 import '../../../model/data.dart';
@@ -74,6 +75,7 @@ class Info_delete_State extends State<Info_delete> {
                     color: const Color(0xff792E2E),
                     icon: Icons.delete_outline,
                     onPressed: () {
+                      Haptic.heavy();
                       db.loadData();
                       final deletedIndex = Model.SelectedDoc.index;
                       db.DocumentsList.removeAt(deletedIndex);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:valid_doc/model/countries.dart';
 import 'package:valid_doc/prefabs/style.dart';
 
 class DocumentTile extends StatelessWidget {
@@ -72,11 +73,26 @@ class DocumentTile extends StatelessWidget {
     }
   }
 
-  // type 'id' no storage mas arquivo é 'ident.png'
+  static const _typesWithAsset = {'passport', 'id', 'car_id', 'visa'};
+
+  bool _hasAsset(String t) => _typesWithAsset.contains(t);
+
   String _assetForType(String t) {
     if (t == 'id') return 'files/ident.png';
     return 'files/$t.png';
   }
+
+  IconData _iconForType(String t) {
+    switch (t) {
+      case 'voter':   return Icons.how_to_vote_rounded;
+      case 'vaccine': return Icons.vaccines_rounded;
+      case 'ctps':    return Icons.work_rounded;
+      case 'birth':   return Icons.article_rounded;
+      default:        return Icons.description_rounded;
+    }
+  }
+
+  String _flagAsset(String c) => flagAsset(c);
 
   @override
   Widget build(BuildContext context) {
@@ -106,17 +122,20 @@ class DocumentTile extends StatelessWidget {
             child: Row(
               children: [
                 // ── Ícone do documento ──────────────────────────────
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: Colors.white12,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.all(6),
-                  child: Image.asset(
-                    _assetForType(type),
-                    fit: BoxFit.contain,
+                Hero(
+                  tag: 'doc_icon_${name.hashCode}',
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Colors.white12,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(6),
+                    child: _hasAsset(type)
+                        ? Image.asset(_assetForType(type), fit: BoxFit.contain)
+                        : Icon(_iconForType(type),
+                              color: Colors.white70, size: 36),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -184,10 +203,12 @@ class DocumentTile extends StatelessWidget {
                   children: [
                     ClipOval(
                       child: Image.asset(
-                        'files/flags/${country.toLowerCase()}.png',
+                        _flagAsset(country),
                         width: 32,
                         height: 32,
                         fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            const Icon(Icons.flag, color: Colors.white38, size: 24),
                       ),
                     ),
                     const SizedBox(height: 8),

@@ -13,12 +13,17 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.6
-  intl: ^0.20.2
+  intl: ^0.19.0
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   flutter_local_notifications: ^19.5.0
   timezone: ^0.10.1
   image_picker: ^1.1.2
+  flutter_localizations:
+    sdk: flutter
+  shared_preferences: ^2.3.3
+  screenshot: ^3.0.0
+  share_plus: ^10.1.4
 
 dev_dependencies:
   flutter_test:
@@ -29,34 +34,14 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
 
   assets:
+    - files/flags/w80/
     - files/passport.png
     - files/ident.png
     - files/car_id.png
     - files/visa.png
-    - files/flags/brazil.png
-    - files/flags/usa.png
-    - files/flags/spain.png
-    - files/flags/israel.png
-    - files/flags/canada.png
-    - files/flags/france.png
-    - files/flags/italy.png
-    - files/flags/portugal.png
-    - files/flags/argentina.png
-    - files/flags/peru.png
-    - files/flags/chile.png
-    - files/flags/poland.png
-    - files/flags/uruguay.png
-    - files/flags/colombia.png
-    - files/flags/japan.png
-    - files/flags/russia.png
-    - files/flags/england.png
-    - files/flags/germany.png
-    - files/flags/australia.png
-    - files/flags/china.png
-    - files/flags/mexico.png
-    - files/flags/paraguay.png
 
   fonts:
     - family: RobotoRegular

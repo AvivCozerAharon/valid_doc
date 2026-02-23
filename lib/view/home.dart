@@ -252,7 +252,12 @@ class Home_State extends State<Home> {
       itemCount: db.PeopleList.length,
       itemBuilder: (context, i) {
         final p = db.PeopleList[i];
-        final person = Person(id: p[0], name: p[1]);
+        Color? savedColor;
+        if (p.length > 2 && p[2] != null) {
+          try { savedColor = Color(p[2] as int); } catch (_) {}
+        }
+        final person =
+            Person(id: p[0] as String, name: p[1] as String, customColor: savedColor);
         final docCount = _docCount(person.id);
         final alerts = _alertCount(person.id);
 
@@ -264,6 +269,7 @@ class Home_State extends State<Home> {
             Model.SelectedPerson = person;
             Navigation.person_docs(context);
           },
+          onAvatarTap: () => _showColorPicker(person),
         );
       },
     );
@@ -308,6 +314,79 @@ class Home_State extends State<Home> {
           personName: personName,
         );
       },
+    );
+  }
+
+  Future<void> _showColorPicker(Person person) async {
+    await showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: const Color(0xff2A2626),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Cor de ${person.name}',
+                style: const TextStyle(
+                  fontFamily: Style.fontTitle,
+                  fontSize: 20,
+                  color: Style.secondColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: Person.palette.map((color) {
+                  final isSelected =
+                      person.avatarColor.value == color.value;
+                  return GestureDetector(
+                    onTap: () {
+                      db.savePersonColor(person.id, color.value);
+                      setState(() {});
+                      Navigator.pop(ctx);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected
+                              ? Colors.white
+                              : Colors.transparent,
+                          width: 3,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: color.withOpacity(0.5),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                )
+                              ]
+                            : null,
+                      ),
+                      child: isSelected
+                          ? const Icon(Icons.check,
+                              color: Colors.white, size: 20)
+                          : null,
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -407,12 +486,14 @@ class _PersonCard extends StatelessWidget {
   final int docCount;
   final int alertCount;
   final VoidCallback onTap;
+  final VoidCallback onAvatarTap;
 
   const _PersonCard({
     required this.person,
     required this.docCount,
     required this.alertCount,
     required this.onTap,
+    required this.onAvatarTap,
   });
 
   @override
@@ -435,28 +516,51 @@ class _PersonCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // Avatar
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                        color: color.withOpacity(0.5), width: 2),
-                  ),
-                  child: Center(
-                    child: Text(
-                      person.name.isNotEmpty
-                          ? person.name[0].toUpperCase()
-                          : '?',
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 22,
-                        fontFamily: Style.fontTitle,
-                        fontWeight: FontWeight.bold,
+                // Avatar (toque para mudar cor)
+                GestureDetector(
+                  onTap: onAvatarTap,
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: color.withOpacity(0.5), width: 2),
+                        ),
+                        child: Center(
+                          child: Text(
+                            person.name.isNotEmpty
+                                ? person.name[0].toUpperCase()
+                                : '?',
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 22,
+                              fontFamily: Style.fontTitle,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 18,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: const Color(0xff383434),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: Colors.white24, width: 1),
+                          ),
+                          child: const Icon(Icons.palette_outlined,
+                              color: Colors.white54, size: 10),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 16),

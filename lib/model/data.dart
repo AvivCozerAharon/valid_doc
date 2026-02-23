@@ -14,6 +14,24 @@ class DocumentDataBase {
     PeopleList = List.from(_storage.get("PEOPLE") ?? []);
   }
 
+  void savePersonColor(String personId, int colorValue) {
+    loadData();
+    for (int i = 0; i < PeopleList.length; i++) {
+      if (PeopleList[i][0] == personId) {
+        final entry = List.from(PeopleList[i]);
+        // índice 2 é a cor customizada
+        if (entry.length < 3) {
+          entry.add(colorValue);
+        } else {
+          entry[2] = colorValue;
+        }
+        PeopleList[i] = entry;
+        break;
+      }
+    }
+    updatePeople();
+  }
+
   void updateDocuments() {
     _storage.put("DOCUMENTS", DocumentsList);
   }

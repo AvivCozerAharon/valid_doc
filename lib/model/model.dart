@@ -3,21 +3,29 @@ import 'package:flutter/material.dart';
 class Person {
   String id;
   String name;
+  Color? customColor;
 
-  Person({required this.id, required this.name});
+  Person({required this.id, required this.name, this.customColor});
+
+  static const List<Color> palette = [
+    Color(0xff558459),
+    Color(0xff4A7DB5),
+    Color(0xffDA8130),
+    Color(0xff8B5CA8),
+    Color(0xffB54A6E),
+    Color(0xff4AABB5),
+    Color(0xffB5A44A),
+    Color(0xffC0392B),
+    Color(0xff1ABC9C),
+    Color(0xff2980B9),
+    Color(0xff8E44AD),
+    Color(0xffD35400),
+  ];
 
   Color get avatarColor {
-    final colors = [
-      const Color(0xff558459),
-      const Color(0xff4A7DB5),
-      const Color(0xffDA8130),
-      const Color(0xff8B5CA8),
-      const Color(0xffB54A6E),
-      const Color(0xff4AABB5),
-      const Color(0xffB5A44A),
-    ];
+    if (customColor != null) return customColor!;
     int hash = id.codeUnits.fold(0, (a, b) => a + b);
-    return colors[hash % colors.length];
+    return palette[hash % palette.length];
   }
 }
 

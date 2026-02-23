@@ -5,7 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:valid_doc/model/countries.dart';
 import 'package:valid_doc/model/model.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:valid_doc/services/haptic.dart';
 import 'package:valid_doc/prefabs/style.dart';
 import '../../../controller/nav_controller.dart';
 import '../../../model/data.dart';
@@ -23,6 +27,7 @@ class Info_home_State extends State<Info_home> {
   bool _editingNotes = false;
   late TextEditingController _numberCtrl;
   late TextEditingController _notesCtrl;
+  final _screenshotCtrl = ScreenshotController();
 
   @override
   void initState() {
@@ -84,10 +89,56 @@ class Info_home_State extends State<Info_home> {
     }
   }
 
+  static const _typesWithAsset = {'passport', 'id', 'car_id', 'visa'};
+
   String _assetForType(String t) =>
       t == 'id' ? 'files/ident.png' : 'files/$t.png';
 
+  IconData _iconForType(String t) {
+    switch (t) {
+      case 'voter':   return Icons.how_to_vote_rounded;
+      case 'vaccine': return Icons.vaccines_rounded;
+      case 'ctps':    return Icons.work_rounded;
+      case 'birth':   return Icons.article_rounded;
+      default:        return Icons.description_rounded;
+    }
+  }
+
+  String _flagAsset(String c) => flagAsset(c);
+
+  Future<void> _shareDocument() async {
+    Haptic.light();
+    final doc = Model.SelectedDoc;
+    final countryName = countryNames[doc.country.toLowerCase()] ?? doc.country;
+    final number = doc.number == 'none' ? '-' : doc.number;
+
+    // Captura o card como imagem
+    final image = await _screenshotCtrl.captureFromLongWidget(
+      _ShareCard(
+        name: doc.name,
+        type: doc.type,
+        country: countryName,
+        date: _formattedVal(),
+        number: number,
+        color: _statusColor(),
+        flagAsset: _flagAsset(doc.country),
+        hasAsset: _typesWithAsset.contains(doc.type),
+        assetPath: _assetForType(doc.type),
+        iconData: _iconForType(doc.type),
+      ),
+      pixelRatio: 3.0,
+    );
+
+    final text = '📄 ${doc.name}\n🗓 Validade: ${_formattedVal()}\n🌍 País: $countryName\n🔢 Número: $number';
+
+    await Share.shareXFiles(
+      [XFile.fromData(image, mimeType: 'image/png', name: 'documento.png')],
+      text: text,
+    );
+  }
+
   void _saveField({required String field, required String value}) {
+    Haptic.light();
     db.loadData();
     final v = value.trim().isEmpty ? 'none' : value.trim();
     if (field == 'number') {
@@ -233,6 +284,11 @@ class Info_home_State extends State<Info_home> {
                             ),
                             const Spacer(),
                             IconButton(
+                              onPressed: _shareDocument,
+                              icon: const Icon(Icons.share_outlined,
+                                  color: Style.secondColor, size: 22),
+                            ),
+                            IconButton(
                               onPressed: () =>
                                   Navigation.info_delete(context),
                               icon: const Icon(Icons.delete_outline,
@@ -241,16 +297,25 @@ class Info_home_State extends State<Info_home> {
                           ],
                         ),
                       ),
-                      Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(16),
+                      Hero(
+                        tag: 'doc_icon_${Model.SelectedDoc.name.hashCode}',
+                        child: Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: const EdgeInsets.all(8),
+                          child: _typesWithAsset.contains(Model.SelectedDoc.type)
+                              ? Image.asset(
+                                  _assetForType(Model.SelectedDoc.type),
+                                  fit: BoxFit.contain)
+                              : Icon(
+                                  _iconForType(Model.SelectedDoc.type),
+                                  color: Colors.white70,
+                                  size: 42),
                         ),
-                        padding: const EdgeInsets.all(8),
-                        child: Image.asset(_assetForType(Model.SelectedDoc.type),
-                            fit: BoxFit.contain),
                       ),
                       const SizedBox(height: 12),
                       Padding(
@@ -288,10 +353,12 @@ class Info_home_State extends State<Info_home> {
                         children: [
                           ClipOval(
                             child: Image.asset(
-                              'files/flags/${Model.SelectedDoc.country.toLowerCase()}.png',
+                              _flagAsset(Model.SelectedDoc.country),
                               width: 28,
                               height: 28,
                               fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.flag, color: Colors.white54, size: 24),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -609,6 +676,170 @@ class _InfoCard extends StatelessWidget {
           child,
         ],
       ),
+    );
+  }
+}
+
+// ── Share Card (gerado como imagem) ────────────────────────────────────────
+class _ShareCard extends StatelessWidget {
+  final String name;
+  final String type;
+  final String country;
+  final String date;
+  final String number;
+  final Color color;
+  final String flagAsset;
+  final bool hasAsset;
+  final String assetPath;
+  final IconData iconData;
+
+  const _ShareCard({
+    required this.name,
+    required this.type,
+    required this.country,
+    required this.date,
+    required this.number,
+    required this.color,
+    required this.flagAsset,
+    required this.hasAsset,
+    required this.assetPath,
+    required this.iconData,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 360,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xff1E1A1A),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: color.withOpacity(0.4), width: 2),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // header colorido
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.all(6),
+                  child: hasAsset
+                      ? Image.asset(assetPath, fit: BoxFit.contain)
+                      : Icon(iconData, color: Colors.white, size: 28),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontFamily: Style.fontButton,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // infos
+          _ShareRow(icon: Icons.calendar_today_outlined, label: 'Validade', value: date, color: color),
+          const SizedBox(height: 10),
+          _ShareRow(
+            icon: Icons.flag_outlined,
+            label: 'País',
+            value: country,
+            color: color,
+            trailing: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: Image.asset(flagAsset, width: 24, height: 16,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox()),
+            ),
+          ),
+          if (number != '-') ...[
+            const SizedBox(height: 10),
+            _ShareRow(icon: Icons.tag, label: 'Número', value: number, color: color),
+          ],
+
+          const SizedBox(height: 16),
+
+          // rodapé
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.verified_rounded, color: color, size: 14),
+              const SizedBox(width: 6),
+              const Text(
+                'Valid Doc',
+                style: TextStyle(
+                  color: Colors.white38,
+                  fontSize: 12,
+                  fontFamily: Style.fontSubButton,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShareRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  final Widget? trailing;
+
+  const _ShareRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: color.withOpacity(0.7), size: 16),
+        const SizedBox(width: 8),
+        Text(label,
+            style: const TextStyle(
+                color: Colors.white38, fontSize: 12,
+                fontFamily: Style.fontSubButton)),
+        const Spacer(),
+        if (trailing != null) ...[
+          trailing!,
+          const SizedBox(width: 6),
+        ],
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontFamily: Style.fontButton)),
+      ],
     );
   }
 }
