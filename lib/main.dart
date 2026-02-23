@@ -1,34 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:valid_doc/services/notification_service.dart';
 import 'package:valid_doc/view/home.dart';
 import 'prefabs/style.dart';
 
-
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
   await Hive.initFlutter();
-  var box = await Hive.openBox('storage');
+  await Hive.openBox('storage');
 
-  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.init();
+
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Style.firstColor, // status bar color
-
+    statusBarColor: Style.firstColor,
   ));
-  runApp(MyApp());
-  ;}
 
+  runApp(const MyApp());
+}
 
-
-// This Widget is the main application widget.
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Valid Doc',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         visualDensity: VisualDensity.adaptivePlatformDensity,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Style.firstColor,
+          brightness: Brightness.dark,
+        ),
       ),
-      home: Home(),
+      home: const Home(),
     );
   }
 }

@@ -1,21 +1,27 @@
-import 'package:valid_doc/view/N_doc/doc_country.dart';
+import 'package:flutter/material.dart';
 
-class Model{
-  static String Doc_country = '';
-  static String Doc_val = '';
-  static String Doc_type = '';
-  static String Doc_name = '';
-  static DocumentSelected SelectedDoc = DocumentSelected(index: 1, name: 'teste', type: 'ter', country: 'test', val: 'test',number: 'teste',notes: 'test');
-  static clear(){
-    Model.Doc_country = '';
-    Model.Doc_val = '';
-    Model.Doc_type = '';
-    Model.Doc_name = '';
+class Person {
+  String id;
+  String name;
+
+  Person({required this.id, required this.name});
+
+  Color get avatarColor {
+    final colors = [
+      const Color(0xff558459),
+      const Color(0xff4A7DB5),
+      const Color(0xffDA8130),
+      const Color(0xff8B5CA8),
+      const Color(0xffB54A6E),
+      const Color(0xff4AABB5),
+      const Color(0xffB5A44A),
+    ];
+    int hash = id.codeUnits.fold(0, (a, b) => a + b);
+    return colors[hash % colors.length];
   }
 }
 
-
-class DocumentSelected{
+class Document {
   int index;
   String name;
   String type;
@@ -23,10 +29,49 @@ class DocumentSelected{
   String val;
   String number;
   String notes;
-  DocumentSelected({required this.index,required this.name,required this.type,
+  String personId;
+  String photoPath;
+
+  Document({
+    required this.index,
+    required this.name,
+    required this.type,
     required this.country,
     required this.val,
-  required this.number,
-  required this.notes});
+    required this.number,
+    required this.notes,
+    required this.personId,
+    required this.photoPath,
+  });
 }
 
+class Model {
+  static String Doc_country = '';
+  static String Doc_val = '';
+  static String Doc_type = '';
+  static String Doc_name = '';
+  static String Doc_personId = '';
+
+  static Document SelectedDoc = Document(
+    index: 0,
+    name: '',
+    type: 'passport',
+    country: 'brazil',
+    val: '01/01/2030',
+    number: 'none',
+    notes: 'none',
+    personId: '',
+    photoPath: 'none',
+  );
+
+  // pessoa selecionada para ver detalhes
+  static Person SelectedPerson = Person(id: '', name: '');
+
+  static void clear() {
+    Doc_country = '';
+    Doc_val = '';
+    Doc_type = '';
+    Doc_name = '';
+    Doc_personId = '';
+  }
+}

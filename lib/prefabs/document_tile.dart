@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:valid_doc/model/model.dart';
 import 'package:valid_doc/prefabs/style.dart';
-
-import '../controller/nav_controller.dart';
 
 class DocumentTile extends StatelessWidget {
   final String name;
@@ -11,87 +8,198 @@ class DocumentTile extends StatelessWidget {
   final String type;
   final String country;
   final Function() onPressed;
+  final String? personName;
 
-  const DocumentTile(
-      {super.key,
-      required this.name,
-      required this.type,
-      required this.country,
-      required this.val,
-      required this.onPressed});
+  const DocumentTile({
+    super.key,
+    required this.name,
+    required this.type,
+    required this.country,
+    required this.val,
+    required this.onPressed,
+    this.personName,
+  });
 
-  checkValColor() {
-    DateTime checkVal = DateFormat('dd/MM/yyyy').parse(val);
-    DateTime now = DateTime.now();
-    int difference = checkVal.difference(now).inDays;
-    int differenceHour = checkVal.difference(now).inHours;
-    if (difference >= 365 * 2) {
-      return const  Color(0xff558459);
-    } else if (365 * 2 > difference && difference >= 365) {
-      return const Color(0xffDA8130);
-    } else if (difference < 365 && difference > 183) {
-      return const Color(0xffDA4430);
-    } else if (difference <= 183 && difference >= 0 && differenceHour > 0) {
-      return const Color(0xffFF0000);
-    } else if (difference <= 0) {
+  Color _statusColor() {
+    try {
+      DateTime checkVal;
+      try {
+        checkVal = DateFormat('dd/MM/yyyy').parse(val);
+      } catch (_) {
+        checkVal = DateFormat('d/M/yyyy').parse(val);
+      }
+      final int difference = checkVal.difference(DateTime.now()).inDays;
+      if (difference >= 365 * 2) return const Color(0xff558459);
+      if (difference >= 365) return const Color(0xffDA8130);
+      if (difference > 183) return const Color(0xffDA4430);
+      if (difference >= 0) return const Color(0xffFF0000);
       return const Color(0xff766E6E);
-    } else {
-      return Colors.black;
+    } catch (_) {
+      return const Color(0xff766E6E);
     }
+  }
+
+  String _formattedVal() {
+    try {
+      DateTime date;
+      try {
+        date = DateFormat('dd/MM/yyyy').parse(val);
+      } catch (_) {
+        date = DateFormat('d/M/yyyy').parse(val);
+      }
+      return DateFormat('dd/MM/yyyy').format(date);
+    } catch (_) {
+      return val;
+    }
+  }
+
+  String _daysLabel() {
+    try {
+      DateTime date;
+      try {
+        date = DateFormat('dd/MM/yyyy').parse(val);
+      } catch (_) {
+        date = DateFormat('d/M/yyyy').parse(val);
+      }
+      final diff = date.difference(DateTime.now()).inDays;
+      if (diff < 0) return 'Expirado';
+      if (diff == 0) return 'Expira hoje!';
+      if (diff < 30) return '$diff dias restantes';
+      if (diff < 365) return '${(diff / 30).round()} meses restantes';
+      return '${(diff / 365 * 10).round() / 10} anos restantes';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  // type 'id' no storage mas arquivo é 'ident.png'
+  String _assetForType(String t) {
+    if (t == 'id') return 'files/ident.png';
+    return 'files/$t.png';
   }
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-        onPressed: onPressed,
-        child: SizedBox(
-            height: MediaQuery.of(context).size.height < 590?MediaQuery.of(context).size.height * 0.3:MediaQuery.of(context).size.height >850?MediaQuery.of(context).size.height * 0.18:MediaQuery.of(context).size.height * 0.2,
-            child:Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0),
+    final color = _statusColor();
 
-          ),
-          color: checkValColor(),
-          elevation: 20,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.max,
-            children:  <Widget>[
-              ListTile(
-                leading:  ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: 68,
-                    maxWidth: 150,
-                  ),
-                  child: Image.asset('files/$type.png',
-                      fit: BoxFit.fill)),
-
-                title: Text(
-                  name,
-                    textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontFamily: Style.fontButton,
-                      fontSize: 17,
-                      color: Style.secondColor),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.45),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
                 ),
-
-                subtitle: Text(
-                    val,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontFamily: Style.fontSubButton,
-                        fontSize: 17,
-                        color: Style.secondColor),
+              ],
+            ),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                // ── Ícone do documento ──────────────────────────────
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.white12,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                trailing: Image.asset(
-                  'files/flags/${country.toLowerCase()}.png',
-                  width: 36,
-                  height: 36,
+                  padding: const EdgeInsets.all(6),
+                  child: Image.asset(
+                    _assetForType(type),
+                    fit: BoxFit.contain,
+                  ),
                 ),
+                const SizedBox(width: 14),
 
-              ),
-            ],
+                // ── Textos ──────────────────────────────────────────
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: Style.fontButton,
+                          fontSize: 15,
+                          color: Style.secondColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formattedVal(),
+                        style: const TextStyle(
+                          fontFamily: Style.fontSubButton,
+                          fontSize: 13,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _daysLabel(),
+                        style: const TextStyle(
+                          fontFamily: Style.fontSubButton,
+                          fontSize: 12,
+                          color: Colors.white54,
+                        ),
+                      ),
+                      if (personName != null && personName!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.person_outline,
+                                  color: Colors.white30, size: 11),
+                              const SizedBox(width: 3),
+                              Text(
+                                personName!,
+                                style: const TextStyle(
+                                  color: Colors.white30,
+                                  fontSize: 11,
+                                  fontFamily: Style.fontSubButton,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+
+                // ── Bandeira + chevron ──────────────────────────────
+                Column(
+                  children: [
+                    ClipOval(
+                      child: Image.asset(
+                        'files/flags/${country.toLowerCase()}.png',
+                        width: 32,
+                        height: 32,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Icon(Icons.chevron_right,
+                        color: Colors.white38, size: 18),
+                  ],
+                ),
+              ],
+            ),
           ),
-        )));
+        ),
+      ),
+    );
   }
 }

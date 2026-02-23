@@ -1,0 +1,43 @@
+workflows:
+  ios-release:
+    name: iOS Release
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store  # troque por 'ad_hoc' se quiser TestFlight/distribuição direta
+        bundle_identifier: br.aviv.valid_doc
+
+    scripts:
+      - name: Set up Flutter
+        script: flutter pub get
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install
+
+      - name: Build iOS
+        script: |
+          flutter build ios --release --no-codesign
+
+      - name: Export IPA
+        script: |
+          xcode-project use-profiles
+          xcode-project build-ipa \
+            --workspace ios/Runner.xcworkspace \
+            --scheme Runner
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true

@@ -47,5 +47,16 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>Este app envia alertas sobre o vencimento dos seus documentos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Permite adicionar uma foto ao seu documento.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Permite tirar uma foto do seu documento.</string>
 </dict>
 </plist>

@@ -1,317 +1,614 @@
-import 'package:flutter/cupertino.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:valid_doc/model/model.dart';
-import 'package:valid_doc/prefabs/buttons.dart';
 import 'package:valid_doc/prefabs/style.dart';
-import 'package:valid_doc/view/N_doc/doc_type.dart';
 import '../../../controller/nav_controller.dart';
 import '../../../model/data.dart';
-import '../../../prefabs/widget.dart';
 
 class Info_home extends StatefulWidget {
   @override
   Info_home_State createState() => Info_home_State();
 }
 
-String color_text = '';
-
-checkValColor() {
-  DateTime checkVal = DateFormat('dd/MM/yyyy').parse(Model.SelectedDoc.val);
-  DateTime now = DateTime.now();
-  int difference = checkVal.difference(now).inDays;
-  int differenceHour = checkVal.difference(now).inHours;
-  if (difference >= 365 * 2) {
-    color_text = 'Expira em mais de 2 anos';
-    return const Color(0xff558459);
-  } else if (365 * 2 > difference && difference >= 365) {
-    color_text = 'Expira em menos de 2 anos';
-    return const Color(0xffDA8130);
-  } else if (difference < 365 && difference > 183) {
-    color_text = 'Expira em menos de 1 anos';
-    return const Color(0xffDA4430);
-  } else if (difference <= 183 && difference >= 0 && differenceHour > 0) {
-    color_text = 'Expira em menos de 6 meses';
-    return const Color(0xffFF0000);
-  } else if (difference <= 0) {
-    color_text = 'Expirado';
-    return const Color(0xff766E6E);
-  } else {
-    return Colors.black;
-  }
-}
-
 class Info_home_State extends State<Info_home> {
+  final _storage = Hive.box('storage');
+  DocumentDataBase db = DocumentDataBase();
+
+  bool _editingNumber = false;
+  bool _editingNotes = false;
+  late TextEditingController _numberCtrl;
+  late TextEditingController _notesCtrl;
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        backgroundColor: Style.firstColor,
-        body: Center(
-            child:
-                Column(mainAxisAlignment: MainAxisAlignment.start, children: [
-          Container(
-            decoration: BoxDecoration(
-              color: checkValColor(),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(50),
-                bottomRight: Radius.circular(50),
+  void initState() {
+    super.initState();
+    _numberCtrl = TextEditingController(
+        text: Model.SelectedDoc.number == 'none' ? '' : Model.SelectedDoc.number);
+    _notesCtrl = TextEditingController(
+        text: Model.SelectedDoc.notes == 'none' ? '' : Model.SelectedDoc.notes);
+  }
+
+  @override
+  void dispose() {
+    _numberCtrl.dispose();
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  Color _statusColor() {
+    try {
+      final date = _parseDate(Model.SelectedDoc.val);
+      final diff = date.difference(DateTime.now()).inDays;
+      if (diff >= 365 * 2) return const Color(0xff558459);
+      if (diff >= 365) return const Color(0xffDA8130);
+      if (diff > 183) return const Color(0xffDA4430);
+      if (diff >= 0) return const Color(0xffFF0000);
+      return const Color(0xff766E6E);
+    } catch (_) {
+      return const Color(0xff766E6E);
+    }
+  }
+
+  String _statusText() {
+    try {
+      final diff =
+          _parseDate(Model.SelectedDoc.val).difference(DateTime.now()).inDays;
+      if (diff >= 365 * 2) return 'Expira em mais de 2 anos';
+      if (diff >= 365) return 'Expira em menos de 2 anos';
+      if (diff > 183) return 'Expira em menos de 1 ano';
+      if (diff >= 0) return 'Expira em menos de 6 meses';
+      return 'Documento expirado';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  DateTime _parseDate(String v) {
+    try {
+      return DateFormat('dd/MM/yyyy').parse(v);
+    } catch (_) {
+      return DateFormat('d/M/yyyy').parse(v);
+    }
+  }
+
+  String _formattedVal() {
+    try {
+      return DateFormat('dd/MM/yyyy').format(_parseDate(Model.SelectedDoc.val));
+    } catch (_) {
+      return Model.SelectedDoc.val;
+    }
+  }
+
+  String _assetForType(String t) =>
+      t == 'id' ? 'files/ident.png' : 'files/$t.png';
+
+  void _saveField({required String field, required String value}) {
+    db.loadData();
+    final v = value.trim().isEmpty ? 'none' : value.trim();
+    if (field == 'number') {
+      db.DocumentsList[Model.SelectedDoc.index][4] = v;
+      Model.SelectedDoc = Document(
+        index: Model.SelectedDoc.index,
+        name: Model.SelectedDoc.name,
+        type: Model.SelectedDoc.type,
+        country: Model.SelectedDoc.country,
+        val: Model.SelectedDoc.val,
+        number: v,
+        notes: Model.SelectedDoc.notes,
+        personId: Model.SelectedDoc.personId,
+        photoPath: Model.SelectedDoc.photoPath,
+      );
+    } else {
+      db.DocumentsList[Model.SelectedDoc.index][5] = v;
+      Model.SelectedDoc = Document(
+        index: Model.SelectedDoc.index,
+        name: Model.SelectedDoc.name,
+        type: Model.SelectedDoc.type,
+        country: Model.SelectedDoc.country,
+        val: Model.SelectedDoc.val,
+        number: Model.SelectedDoc.number,
+        notes: v,
+        personId: Model.SelectedDoc.personId,
+        photoPath: Model.SelectedDoc.photoPath,
+      );
+    }
+    db.updateDocuments();
+  }
+
+  Future<void> _pickPhoto() async {
+    if (kIsWeb) return;
+    final picker = ImagePicker();
+    final picked =
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked == null) return;
+
+    db.loadData();
+    // Garante que o índice 7 existe
+    while (db.DocumentsList[Model.SelectedDoc.index].length < 8) {
+      db.DocumentsList[Model.SelectedDoc.index].add('none');
+    }
+    db.DocumentsList[Model.SelectedDoc.index][7] = picked.path;
+    db.updateDocuments();
+    setState(() {
+      Model.SelectedDoc = Document(
+        index: Model.SelectedDoc.index,
+        name: Model.SelectedDoc.name,
+        type: Model.SelectedDoc.type,
+        country: Model.SelectedDoc.country,
+        val: Model.SelectedDoc.val,
+        number: Model.SelectedDoc.number,
+        notes: Model.SelectedDoc.notes,
+        personId: Model.SelectedDoc.personId,
+        photoPath: picked.path,
+      );
+    });
+  }
+
+  void _viewPhoto() {
+    final path = Model.SelectedDoc.photoPath;
+    if (path == 'none' || path.isEmpty) return;
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              child: kIsWeb
+                  ? Image.network(path, fit: BoxFit.contain)
+                  : Image.file(File(path), fit: BoxFit.contain),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
               ),
             ),
-            height: MediaQuery.of(context).size.height < 590
-                ? MediaQuery.of(context).size.height * 0.47
-                : MediaQuery.of(context).size.height > 850
-                    ? MediaQuery.of(context).size.height * 0.27
-                    : MediaQuery.of(context).size.height * 0.33,
-            child: Column(
-              children: [
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.03,
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _statusColor();
+    final hasPhoto = Model.SelectedDoc.photoPath != 'none' &&
+        Model.SelectedDoc.photoPath.isNotEmpty;
+
+    return Scaffold(
+      backgroundColor: Style.firstColor,
+      body: GestureDetector(
+        onTap: () {
+          if (_editingNumber) {
+            setState(() => _editingNumber = false);
+            _saveField(field: 'number', value: _numberCtrl.text);
+          }
+          if (_editingNotes) {
+            setState(() => _editingNotes = false);
+            _saveField(field: 'notes', value: _notesCtrl.text);
+          }
+          FocusScope.of(context).unfocus();
+        },
+        child: Column(
+          children: [
+            // ── Banner colorido ──────────────────────────────────────
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(36),
+                  bottomRight: Radius.circular(36),
                 ),
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        alignment: Alignment.topLeft,
-                        child: IconButton(
-                            onPressed: () {
-                              Navigation.back(context);
-                            },
-                            icon: const Icon(
-                              Icons.arrow_back,
-                              color: Style.secondColor,
-                              size: 24,
-                            )),
+                boxShadow: [
+                  BoxShadow(
+                      color: color.withOpacity(0.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 6)),
+                ],
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              onPressed: () => Navigation.back(context),
+                              icon: const Icon(Icons.arrow_back,
+                                  color: Style.secondColor, size: 24),
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              onPressed: () =>
+                                  Navigation.info_delete(context),
+                              icon: const Icon(Icons.delete_outline,
+                                  color: Style.secondColor, size: 24),
+                            ),
+                          ],
+                        ),
                       ),
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        child: Image.asset(_assetForType(Model.SelectedDoc.type),
+                            fit: BoxFit.contain),
+                      ),
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Text(
+                          Model.SelectedDoc.name,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontFamily: Style.fontButton,
+                            fontSize: 17,
+                            color: Style.secondColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black26,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _statusText(),
+                          style: const TextStyle(
+                              fontFamily: Style.fontSubButton,
+                              fontSize: 12,
+                              color: Colors.white),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ClipOval(
+                            child: Image.asset(
+                              'files/flags/${Model.SelectedDoc.country.toLowerCase()}.png',
+                              width: 28,
+                              height: 28,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            _formattedVal(),
+                            style: const TextStyle(
+                                fontFamily: Style.fontSubButton,
+                                fontSize: 18,
+                                color: Style.secondColor),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Detalhes ─────────────────────────────────────────────
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                child: Column(
+                  children: [
+                    // ── Foto do documento ────────────────────────────
+                    _InfoCard(
+                      label: 'Foto do documento',
+                      icon: Icons.photo_camera_outlined,
+                      trailing: TextButton.icon(
+                        onPressed: kIsWeb ? null : _pickPhoto,
+                        icon: Icon(
+                          hasPhoto ? Icons.edit_outlined : Icons.add_photo_alternate_outlined,
+                          size: 15,
+                          color: Colors.white54,
+                        ),
+                        label: Text(
+                          hasPhoto ? 'Trocar' : 'Adicionar',
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 13),
+                        ),
+                      ),
+                      child: hasPhoto
+                          ? GestureDetector(
+                              onTap: _viewPhoto,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: kIsWeb
+                                    ? Image.network(Model.SelectedDoc.photoPath,
+                                        height: 160,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover)
+                                    : Image.file(
+                                        File(Model.SelectedDoc.photoPath),
+                                        height: 160,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover),
+                              ),
+                            )
+                          : GestureDetector(
+                              onTap: kIsWeb ? null : _pickPhoto,
+                              child: Container(
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                      color: Colors.white12,
+                                      width: 1,
+                                      strokeAlign: BorderSide.strokeAlignInside),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.add_photo_alternate_outlined,
+                                          color: Colors.white24, size: 28),
+                                      SizedBox(height: 6),
+                                      Text(
+                                        'Toque para adicionar uma foto',
+                                        style: TextStyle(
+                                            color: Colors.white24,
+                                            fontSize: 12,
+                                            fontFamily: Style.fontSubButton),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                     ),
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        alignment: Alignment.topRight,
-                        child: IconButton(
-                            onPressed: () {
-                              Navigation.info_delete(context);
-                            },
-                            icon: const Icon(
-                              Icons.delete,
-                              color: Style.secondColor,
-                              size: 24,
-                            )),
+
+                    const SizedBox(height: 14),
+
+                    // ── Número ───────────────────────────────────────
+                    _InfoCard(
+                      label: 'Número do documento',
+                      icon: Icons.tag,
+                      trailing: IconButton(
+                        icon: Icon(
+                          _editingNumber ? Icons.check : Icons.edit_outlined,
+                          color: Colors.white54,
+                          size: 18,
+                        ),
+                        onPressed: () {
+                          if (_editingNumber) {
+                            setState(() => _editingNumber = false);
+                            _saveField(
+                                field: 'number', value: _numberCtrl.text);
+                          } else {
+                            setState(() => _editingNumber = true);
+                          }
+                        },
+                      ),
+                      child: _editingNumber
+                          ? TextField(
+                              controller: _numberCtrl,
+                              autofocus: true,
+                              style: const TextStyle(
+                                  color: Style.secondColor,
+                                  fontFamily: Style.fontSubButton,
+                                  fontSize: 16),
+                              decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: 'Ex: AB123456',
+                                  hintStyle:
+                                      TextStyle(color: Colors.white24)),
+                              onSubmitted: (v) {
+                                setState(() => _editingNumber = false);
+                                _saveField(field: 'number', value: v);
+                              },
+                            )
+                          : GestureDetector(
+                              onTap: () =>
+                                  setState(() => _editingNumber = true),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      Model.SelectedDoc.number == 'none'
+                                          ? 'Toque para adicionar'
+                                          : Model.SelectedDoc.number,
+                                      style: TextStyle(
+                                        color: Model.SelectedDoc.number ==
+                                                'none'
+                                            ? Colors.white24
+                                            : Style.secondColor,
+                                        fontFamily:
+                                            Model.SelectedDoc.number == 'none'
+                                                ? Style.fontSubButton
+                                                : Style.fontTitle,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                  if (Model.SelectedDoc.number != 'none')
+                                    IconButton(
+                                      icon: const Icon(Icons.copy_outlined,
+                                          color: Colors.white38, size: 16),
+                                      onPressed: () {
+                                        Clipboard.setData(ClipboardData(
+                                            text: Model.SelectedDoc.number));
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(const SnackBar(
+                                                content: Text('Copiado!')));
+                                      },
+                                    ),
+                                ],
+                              ),
+                            ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // ── Observações ──────────────────────────────────
+                    _InfoCard(
+                      label: 'Observações',
+                      icon: Icons.notes,
+                      trailing: IconButton(
+                        icon: Icon(
+                          _editingNotes ? Icons.check : Icons.edit_outlined,
+                          color: Colors.white54,
+                          size: 18,
+                        ),
+                        onPressed: () {
+                          if (_editingNotes) {
+                            setState(() => _editingNotes = false);
+                            _saveField(
+                                field: 'notes', value: _notesCtrl.text);
+                          } else {
+                            setState(() => _editingNotes = true);
+                          }
+                        },
+                      ),
+                      child: _editingNotes
+                          ? TextField(
+                              controller: _notesCtrl,
+                              autofocus: true,
+                              maxLines: 4,
+                              style: const TextStyle(
+                                  color: Style.secondColor,
+                                  fontFamily: Style.fontSubButton,
+                                  fontSize: 15),
+                              decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: 'Adicione uma observação...',
+                                  hintStyle:
+                                      TextStyle(color: Colors.white24)),
+                              onSubmitted: (v) {
+                                setState(() => _editingNotes = false);
+                                _saveField(field: 'notes', value: v);
+                              },
+                            )
+                          : GestureDetector(
+                              onTap: () =>
+                                  setState(() => _editingNotes = true),
+                              child: Text(
+                                Model.SelectedDoc.notes == 'none'
+                                    ? 'Toque para adicionar'
+                                    : Model.SelectedDoc.notes,
+                                style: TextStyle(
+                                  color: Model.SelectedDoc.notes == 'none'
+                                      ? Colors.white24
+                                      : Colors.white70,
+                                  fontFamily: Style.fontSubButton,
+                                  fontSize: 15,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // ── Editar validade ──────────────────────────────
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: TextButton(
+                        onPressed: () => Navigation.info_edit(context),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.white10,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            side: const BorderSide(
+                                color: Colors.white24, width: 1),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.edit_calendar_outlined,
+                                color: Style.secondColor, size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              'Editar data de validade',
+                              style: TextStyle(
+                                color: Style.secondColor,
+                                fontFamily: Style.fontNextButton,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-                FittedBox(
-                  fit: BoxFit.cover,
-                  child: Text(
-                    Model.SelectedDoc.name,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontFamily: Style.fontButton,
-                        fontSize: 19,
-                        color: Style.secondColor),
-                  ),
-                ),
-                Text(
-                  color_text,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontFamily: Style.fontSubButton,
-                      fontSize: 15,
-                      color: Style.secondColor),
-                ),
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.010,
-                ),
-                Image.asset(
-                  'files/flags/${Model.SelectedDoc.country.toLowerCase()}.png',
-                  width: 40,
-                  height: 40,
-                ),
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.010,
-                ),
-                Text(
-                  Model.SelectedDoc.val,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontFamily: Style.fontSubButton,
-                      fontSize: 20,
-                      color: Style.secondColor),
-                ),
-              ],
+              ),
             ),
-          ),
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.025,
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Widget child;
+  final Widget? trailing;
+
+  const _InfoCard(
+      {required this.label,
+      required this.icon,
+      required this.child,
+      this.trailing});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 14),
+      decoration: BoxDecoration(
+        color: const Color(0xff2A2626),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              if(Model.SelectedDoc.number != 'none')
-              TextButton(
-                onPressed: null,
-                child: Container(
-                    width: MediaQuery.of(context).size.width * 0.9,
-                    height: MediaQuery.of(context).size.height * 0.08,
-                    color: const Color(0xff383434),
-                    alignment: Alignment.centerLeft,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.04,
-                        ),
-                        const Text(
-                          'Numero:',
-                          style: TextStyle(
-                            color: Style.secondColor,
-                            fontFamily: Style.fontButton,
-                            fontSize: 15,
-                          ),
-                        ),
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.04,
-                        ),
-                         Text(
-                          Model.SelectedDoc.number,
-                          style: const TextStyle(
-                            color: Style.secondColor,
-                            fontFamily: Style.fontTitle,
-                            fontSize: 20,
-                          ),
-                        ),
-                      ],
-                    )),
-              ),
-              if(Model.SelectedDoc.number == 'none')
-                TextButton(
-                  onPressed: null,
-                  child: Container(
-                      width: MediaQuery.of(context).size.width * 0.9,
-                      height: MediaQuery.of(context).size.height * 0.08,
-                      color: const Color(0xff383434),
-                      alignment: Alignment.centerLeft,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: MediaQuery.of(context).size.width * 0.04,
-                          ),
-                          const Text(
-                            'Adiconar o número do documento',
-                            style: TextStyle(
-                              color: Style.secondColor,
-                              fontFamily: Style.fontButton,
-                              fontSize: 15,
-                            ),
-                          ),
-                          SizedBox(
-                            width: MediaQuery.of(context).size.width * 0.04,
-                          ),
-                          Icon(Icons.add_circle_outline_rounded,color: Style.secondColor,size: 20,),
-
-                        ],
-                      )),
-                ),
-
-                SizedBox(
-                height: MediaQuery.of(context).size.height * 0.025,
-              ),
-              if(Model.SelectedDoc.notes != 'none')
-                TextButton(
-                onPressed: null,
-                child: Container(
-                    width: MediaQuery.of(context).size.width * 0.9,
-                    height: MediaQuery.of(context).size.height * 0.25,
-                    color: const Color(0xff383434),
-                    alignment: Alignment.topLeft,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.02,
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            SizedBox(
-                              width: MediaQuery.of(context).size.width * 0.04,
-                            ),
-                            const Text(
-                              'Notas do documento:',
-                              style: TextStyle(
-                                color: Style.secondColor,
-                                fontFamily: Style.fontButton,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Container(
-                            alignment: Alignment.center,
-                            margin: EdgeInsets.only(left: 30, top: 15),
-                            child:  Text(
-                              Model.SelectedDoc.notes,
-                              maxLines: 4,
-                              style: const TextStyle(
-                                fontFamily: Style.fontTitle,
-                                fontSize: 20,
-                                color: Style.secondColor,
-                              ),
-                            )),
-                        SizedBox(
-                          width: MediaQuery.of(context).size.height * 0.04,
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: const [
-                            Icon(Icons.edit),
-                          ],
-                        )
-                      ],
-                    )),
-              ),
-              if(Model.SelectedDoc.notes == 'none')
-                TextButton(
-                  onPressed: null,
-                  child: Container(
-                      width: MediaQuery.of(context).size.width * 0.9,
-                      height: MediaQuery.of(context).size.height * 0.08,
-                      color: const Color(0xff383434),
-                      alignment: Alignment.centerLeft,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: MediaQuery.of(context).size.width * 0.04,
-                          ),
-                          const Text(
-                            'Adiconar uma observação ao documento',
-                            style: TextStyle(
-                              color: Style.secondColor,
-                              fontFamily: Style.fontButton,
-                              fontSize: 15,
-                            ),
-                          ),
-                          SizedBox(
-                            width: MediaQuery.of(context).size.width * 0.04,
-                          ),
-                          Icon(Icons.add_circle_outline_rounded,color: Style.secondColor,size: 20,),
-
-                        ],
-                      )),
-                ),
+              Icon(icon, color: Colors.white38, size: 14),
+              const SizedBox(width: 6),
+              Text(label,
+                  style: const TextStyle(
+                      color: Colors.white38,
+                      fontSize: 11,
+                      fontFamily: Style.fontSubButton,
+                      letterSpacing: 0.5)),
+              const Spacer(),
+              if (trailing != null) trailing!,
             ],
           ),
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.05,
-                  ),
-
-                  Button.next(onPressed: (){
-                    Navigation.info_edit(context);
-                  },text: 'Editar Validade',context: context,val: true)
-        ])));
+          const SizedBox(height: 6),
+          child,
+        ],
+      ),
+    );
   }
 }

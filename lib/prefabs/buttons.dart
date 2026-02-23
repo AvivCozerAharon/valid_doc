@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:valid_doc/prefabs/style.dart';
 
@@ -6,7 +5,13 @@ import '../controller/nav_controller.dart';
 import '../model/model.dart';
 
 class Button {
-  static Widget button_doc_type({type, context}) {
+  // Retorna o asset correto dado o tipo interno
+  static String _assetForType(String type) {
+    if (type == 'id') return 'files/ident.png';
+    return 'files/$type.png';
+  }
+
+  static Widget button_doc_type({required String type, required context}) {
     return TextButton(
       onPressed: () {
         if (type == 'visa') {
@@ -19,64 +24,63 @@ class Button {
         }
       },
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.32,
+        width: MediaQuery.of(context).size.width * 0.38,
         height: MediaQuery.of(context).size.height * 0.17,
-        decoration: const BoxDecoration(
-          borderRadius: BorderRadius.all(
-              Radius.circular(15.0) //                 <--- border radius here
-              ),
-          color: Style.thirdColor,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: const Color(0xff383434),
         ),
         alignment: Alignment.center,
         child: Image.asset(
-          'files/${type}.png',
-          width: 75,
-          height: 75,
+          _assetForType(type),
+          width: 72,
+          height: 72,
         ),
       ),
     );
   }
 
-  static Widget underline({@required onPressed, text, context}) {
+  static Widget underline(
+      {required VoidCallback? onPressed, required String text, context}) {
     return TextButton(
       onPressed: onPressed,
-      child: Text(text,
-          style: const TextStyle(
-              fontFamily: Style.fontButton,
-              decoration: TextDecoration.underline,
-              color: Style.secondColor)),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontFamily: Style.fontButton,
+          decoration: TextDecoration.underline,
+          color: Colors.white38,
+        ),
+      ),
     );
   }
 
-  static Widget next({@required onPressed, text, context, val}) {
+  static Widget next(
+      {required VoidCallback? onPressed,
+      required String text,
+      required context,
+      bool? val}) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Style.firstColor,
-      ),
-      child: Container(
-        margin: const EdgeInsets.only(top: 10, left: 50, right: 50, bottom: 10),
+      color: Style.firstColor,
+      padding:
+          const EdgeInsets.only(top: 10, left: 40, right: 40, bottom: 16),
+      child: SizedBox(
+        width: double.infinity,
+        height: 54,
         child: TextButton(
           onPressed: onPressed,
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.8,
-            height: MediaQuery.of(context).size.height * 0.075,
-            color: val == true ? Colors.black : null,
-            decoration: val == true
-                ? null
-                : const BoxDecoration(
-                    borderRadius: BorderRadius.all(Radius.circular(
-                            10.0) //                 <--- border radius here
-                        ),
-                    color: Colors.black,
-                  ),
-            alignment: Alignment.center,
-            child: Text(
-              text,
-              style: TextStyle(
-                color: Style.secondColor,
-                fontFamily: Style.fontNextButton,
-                fontSize: val == true ? 18 : 22,
-              ),
+          style: TextButton.styleFrom(
+            backgroundColor: Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Style.secondColor,
+              fontFamily: Style.fontNextButton,
+              fontSize: 20,
             ),
           ),
         ),
